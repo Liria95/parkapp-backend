@@ -1,14 +1,16 @@
 import dotenv from 'dotenv';
 dotenv.config();
-console.log('Verificando variables de entorno...');
+
+console.log('\n===== VERIFICANDO VARIABLES DE ENTORNO =====');
 console.log('Directorio de trabajo:', process.cwd());
 console.log('FIREBASE_PROJECT_ID:', process.env.FIREBASE_PROJECT_ID || 'NO ENCONTRADO');
 console.log('FIREBASE_API_KEY:', process.env.FIREBASE_API_KEY ? 'Configurado' : 'NO ENCONTRADO');
 console.log('FIREBASE_APP_ID:', process.env.FIREBASE_APP_ID ? 'Configurado' : 'NO ENCONTRADO');
+console.log('================================================\n');
 
-// Si las variables no están, mostrar error 
+// Si las variables no están, mostrar error
 if (!process.env.FIREBASE_API_KEY || !process.env.FIREBASE_PROJECT_ID) {
-  console.error('\nERROR: Variables de Firebase NO encontradas en .env');
+  console.error('ERROR: Variables de Firebase NO encontradas en .env');
   console.error('Verifica que el archivo .env existe en:', process.cwd());
   console.error('Y que contiene las variables FIREBASE_*\n');
 }
@@ -22,6 +24,7 @@ import './config/firebaseAdmin';
 // Importar rutas
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
+import notificationRoutes from './routes/notification.routes';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -40,8 +43,9 @@ app.use((req, res, next) => {
 // RUTAS
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/notifications', notificationRoutes);
 
-// Ruta raíz
+// RUTA RAÍZ
 app.get('/', (req, res) => {
   res.json({
     success: true,
@@ -50,12 +54,13 @@ app.get('/', (req, res) => {
     endpoints: {
       auth: '/api/auth',
       users: '/api/users',
+      notifications: '/api/notifications',
       health: '/api/health'
     }
   });
 });
 
-// Health check
+// HEALTH CHECK
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
@@ -65,6 +70,10 @@ app.get('/api/health', (req, res) => {
       projectId: process.env.FIREBASE_PROJECT_ID || 'NOT_CONFIGURED',
       configured: !!process.env.FIREBASE_API_KEY
     },
+    cloudinary: {
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME || 'NOT_CONFIGURED',
+      configured: !!process.env.CLOUDINARY_API_KEY
+    },
     env: {
       nodeEnv: process.env.NODE_ENV || 'development',
       port: process.env.PORT || 3000
@@ -72,7 +81,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Rutas no encontradas
+// RUTAS NO ENCONTRADAS
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -80,19 +89,29 @@ app.use((req, res) => {
     availableRoutes: [
       'GET /',
       'GET /api/health',
+      
+      // Auth
       'POST /api/auth/register',
       'POST /api/auth/login',
       'GET /api/auth/verify',
+      
+      // Users
       'GET /api/users/profile',
       'PUT /api/users/profile',
-      'POST /api/users/profile-photo'
+      'POST /api/users/profile-photo',
+      'DELETE /api/users/profile-photo',
+      
+      // Notifications
+      'POST /api/notifications/register',
+      'POST /api/notifications/send',
+      'POST /api/notifications/broadcast',
     ]
   });
 });
 
-// Manejo de errores
+// MANEJO DE ERRORES
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', err);
+  console.error('❌ Error:', err);
   
   res.status(err.status || 500).json({
     success: false,
@@ -103,12 +122,12 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 // INICIAR SERVIDOR
 app.listen(PORT, () => {
-  console.log('\n ================================');
   console.log(`Servidor corriendo en puerto ${PORT}`);
   console.log(`API Base: http://localhost:${PORT}`);
   console.log(`Health: http://localhost:${PORT}/api/health`);
   console.log(`Auth: http://localhost:${PORT}/api/auth`);
   console.log(`Users: http://localhost:${PORT}/api/users`);
+  console.log(`Notifications: http://localhost:${PORT}/api/notifications`);
   console.log(`Firebase Project: ${process.env.FIREBASE_PROJECT_ID || 'NOT_CONFIGURED'}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });

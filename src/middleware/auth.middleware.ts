@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import admin from '../config/firebaseAdmin';
 
-// ========== MIDDLEWARE DE AUTENTICACIÓN ==========
+// MIDDLEWARE DE AUTENTICACIÓN
 export const authMiddleware = async (
   req: Request, 
   res: Response, 
@@ -93,7 +93,7 @@ export const authMiddleware = async (
   }
 };
 
-// ========== MIDDLEWARE PARA ADMIN ==========
+// MIDDLEWARE PARA ADMIN
 export const adminMiddleware = async (
   req: Request, 
   res: Response, 
@@ -130,7 +130,7 @@ export const adminMiddleware = async (
   }
 };
 
-// ========== MIDDLEWARE OPCIONAL: Verificar si es el dueño del recurso ==========
+// MIDDLEWARE Verificar si es el dueño del recurso
 export const ownerMiddleware = (resourceField: string = 'userId') => {
   return (req: Request, res: Response, next: NextFunction): void => {
     try {
