@@ -8,20 +8,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Environment variables
-.env
-.env.local
-.env.development
-.env.production
-
-# ========================================
-# FIREBASE - MUY IMPORTANTE
-# ========================================
-serviceAccountKey.json
-firebase-debug.log
-.firebase/
-*-firebase-adminsdk-*.json
-
 # Uploads temporales
 uploads/
 temp/

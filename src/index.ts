@@ -1,29 +1,18 @@
-// ========================================
-// IMPORTAR Y CONFIGURAR DOTENV PRIMERO
-// ESTO DEBE SER LO PRIMERO EN EL ARCHIVO
-// ========================================
 import dotenv from 'dotenv';
 dotenv.config();
+console.log('Verificando variables de entorno...');
+console.log('Directorio de trabajo:', process.cwd());
+console.log('FIREBASE_PROJECT_ID:', process.env.FIREBASE_PROJECT_ID || 'NO ENCONTRADO');
+console.log('FIREBASE_API_KEY:', process.env.FIREBASE_API_KEY ? 'Configurado' : 'NO ENCONTRADO');
+console.log('FIREBASE_APP_ID:', process.env.FIREBASE_APP_ID ? 'Configurado' : 'NO ENCONTRADO');
 
-// ========================================
-// VERIFICAR QUE LAS VARIABLES SE CARGARON
-// ========================================
-console.log('🔍 Verificando variables de entorno...');
-console.log('📂 Directorio de trabajo:', process.cwd());
-console.log('📄 FIREBASE_PROJECT_ID:', process.env.FIREBASE_PROJECT_ID || '❌ NO ENCONTRADO');
-console.log('📄 FIREBASE_API_KEY:', process.env.FIREBASE_API_KEY ? '✅ Configurado' : '❌ NO ENCONTRADO');
-console.log('📄 FIREBASE_APP_ID:', process.env.FIREBASE_APP_ID ? '✅ Configurado' : '❌ NO ENCONTRADO');
-
-// Si las variables no están, mostrar error claro
+// Si las variables no están, mostrar error 
 if (!process.env.FIREBASE_API_KEY || !process.env.FIREBASE_PROJECT_ID) {
-  console.error('\n❌ ERROR: Variables de Firebase NO encontradas en .env');
-  console.error('📋 Verifica que el archivo .env existe en:', process.cwd());
-  console.error('📋 Y que contiene las variables FIREBASE_*\n');
+  console.error('\nERROR: Variables de Firebase NO encontradas en .env');
+  console.error('Verifica que el archivo .env existe en:', process.cwd());
+  console.error('Y que contiene las variables FIREBASE_*\n');
 }
 
-// ========================================
-// AHORA SÍ, IMPORTAR EL RESTO
-// ========================================
 import express from 'express';
 import cors from 'cors';
 
@@ -37,9 +26,7 @@ import userRoutes from './routes/user.routes';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ========================================
 // MIDDLEWARES
-// ========================================
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -50,9 +37,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// ========================================
 // RUTAS
-// ========================================
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 
@@ -107,7 +92,7 @@ app.use((req, res) => {
 
 // Manejo de errores
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('❌ Error:', err);
+  console.error('Error:', err);
   
   res.status(err.status || 500).json({
     success: false,
@@ -116,21 +101,16 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-// ========================================
 // INICIAR SERVIDOR
-// ========================================
 app.listen(PORT, () => {
-  console.log('\n🚀 ================================');
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
-  console.log('🚀 ================================');
-  console.log(`📡 API Base: http://localhost:${PORT}`);
-  console.log(`📡 Health: http://localhost:${PORT}/api/health`);
-  console.log(`🔐 Auth: http://localhost:${PORT}/api/auth`);
-  console.log(`👤 Users: http://localhost:${PORT}/api/users`);
-  console.log('🚀 ================================');
-  console.log(`🔥 Firebase Project: ${process.env.FIREBASE_PROJECT_ID || 'NOT_CONFIGURED'}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log('🚀 ================================\n');
+  console.log('\n ================================');
+  console.log(`Servidor corriendo en puerto ${PORT}`);
+  console.log(`API Base: http://localhost:${PORT}`);
+  console.log(`Health: http://localhost:${PORT}/api/health`);
+  console.log(`Auth: http://localhost:${PORT}/api/auth`);
+  console.log(`Users: http://localhost:${PORT}/api/users`);
+  console.log(`Firebase Project: ${process.env.FIREBASE_PROJECT_ID || 'NOT_CONFIGURED'}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 export default app;
