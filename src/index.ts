@@ -6,6 +6,7 @@ console.log('Directorio de trabajo:', process.cwd());
 console.log('FIREBASE_PROJECT_ID:', process.env.FIREBASE_PROJECT_ID || 'NO ENCONTRADO');
 console.log('FIREBASE_API_KEY:', process.env.FIREBASE_API_KEY ? 'Configurado' : 'NO ENCONTRADO');
 console.log('FIREBASE_APP_ID:', process.env.FIREBASE_APP_ID ? 'Configurado' : 'NO ENCONTRADO');
+console.log('MERCADOPAGO_ACCESS_TOKEN:', process.env.MERCADOPAGO_ACCESS_TOKEN ? 'Configurado' : 'NO ENCONTRADO'); // ✅ NUEVO
 console.log('================================================\n');
 
 // Si las variables no están, mostrar error
@@ -25,6 +26,7 @@ import './config/firebaseAdmin';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import notificationRoutes from './routes/notification.routes';
+import paymentRoutes from './routes/payments.routes';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -36,7 +38,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Logging middleware
 app.use((req, res, next) => {
-  console.log(`📨 ${req.method} ${req.path}`);
+  console.log(` ${req.method} ${req.path}`);
   next();
 });
 
@@ -44,6 +46,7 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/payments', paymentRoutes); 
 
 // RUTA RAÍZ
 app.get('/', (req, res) => {
@@ -55,6 +58,7 @@ app.get('/', (req, res) => {
       auth: '/api/auth',
       users: '/api/users',
       notifications: '/api/notifications',
+      payments: '/api/payments',
       health: '/api/health'
     }
   });
@@ -73,6 +77,10 @@ app.get('/api/health', (req, res) => {
     cloudinary: {
       cloudName: process.env.CLOUDINARY_CLOUD_NAME || 'NOT_CONFIGURED',
       configured: !!process.env.CLOUDINARY_API_KEY
+    },
+    mercadopago: { 
+      configured: !!process.env.MERCADOPAGO_ACCESS_TOKEN,
+      accessTokenPreview: process.env.MERCADOPAGO_ACCESS_TOKEN?.substring(0, 30) + '...'
     },
     env: {
       nodeEnv: process.env.NODE_ENV || 'development',
@@ -105,13 +113,19 @@ app.use((req, res) => {
       'POST /api/notifications/register',
       'POST /api/notifications/send',
       'POST /api/notifications/broadcast',
+      
+      // Payments
+      'GET /api/payments/test',
+      'POST /api/payments/create-payment',
+      'POST /api/payments/webhook',
+      'GET /api/payments/payment-status/:paymentId',
     ]
   });
 });
 
 // MANEJO DE ERRORES
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('❌ Error:', err);
+  console.error('Error:', err);
   
   res.status(err.status || 500).json({
     success: false,
@@ -128,7 +142,9 @@ app.listen(PORT, () => {
   console.log(`Auth: http://localhost:${PORT}/api/auth`);
   console.log(`Users: http://localhost:${PORT}/api/users`);
   console.log(`Notifications: http://localhost:${PORT}/api/notifications`);
+  console.log(`Payments: http://localhost:${PORT}/api/payments`);
   console.log(`Firebase Project: ${process.env.FIREBASE_PROJECT_ID || 'NOT_CONFIGURED'}`);
+  console.log(`Mercado Pago: ${process.env.MERCADOPAGO_ACCESS_TOKEN ? 'Configurado' : 'NO CONFIGURADO'}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
