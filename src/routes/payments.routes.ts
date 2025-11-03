@@ -5,9 +5,7 @@ import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
 
-console.log('Sistema de pagos configurado');
-
-// INTERFACES
+// Interfaces
 interface SimulatePaymentRequest {
   amount: number;
   userId: string;
@@ -21,9 +19,9 @@ interface SimulatePaymentResponse {
   error?: string;
 }
 
-// SIMULACIÓN DE PAGO CON GUARDADO EN FIREBASE
+// Simulación de pago
 router.post(
-  '/simulate-payment', 
+  '/simulate-payment',
   authMiddleware,
   async (req: Request<{}, {}, SimulatePaymentRequest>, res: Response<SimulatePaymentResponse>) => {
     const { amount, userId, userName } = req.body;
@@ -33,11 +31,10 @@ router.post(
     console.log('Monto:', amount);
     console.log('UserId solicitado:', userId);
     console.log('Usuario autenticado:', authenticatedUser.uid);
-    console.log('Usuario:', userName);
     
-    // VERIFICAR QUE EL USUARIO SOLO PUEDA RECARGAR SU PROPIA CUENTA
+    // Verificar autorización
     if (authenticatedUser.uid !== userId) {
-      console.log('❌ Intento de recarga no autorizada');
+      console.log('No autorizado');
       res.status(403).json({
         success: false,
         message: 'No puedes recargar el saldo de otro usuario'
@@ -45,7 +42,7 @@ router.post(
       return;
     }
     
-    // VALIDAR MONTO
+    // Validar monto
     if (!amount || amount <= 0) {
       res.status(400).json({
         success: false,
@@ -57,19 +54,17 @@ router.post(
     if (amount > 50000) {
       res.status(400).json({
         success: false,
-        message: 'El monto máximo de recarga es $50,000'
+        message: 'El monto máximo es $50,000'
       });
       return;
     }
     
     try {
-      // Simular delay de procesamiento
+      // Simular delay
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Simular ID de pago
       const paymentId = `SIM_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      // Simular respuesta de pago aprobado
       const simulatedPayment = {
         id: paymentId,
         status: 'approved',
@@ -81,39 +76,38 @@ router.post(
           name: userName
         },
         payment_method_id: 'simulated',
-        payment_type_id: 'credit_card',
         date_approved: new Date().toISOString(),
-        date_created: new Date().toISOString(),
-        metadata: {
-          simulated: true,
-          user_name: userName
-        }
+        date_created: new Date().toISOString()
       };
       
       console.log('Pago simulado aprobado:', paymentId);
       
-      // ACTUALIZAR FIREBASE
-      
-      // 1. Obtener saldo actual
+      // Obtener saldo actual
       const userDoc = await db.collection('users').doc(userId).get();
+      
+      if (!userDoc.exists) {
+        res.status(404).json({
+          success: false,
+          message: 'Usuario no encontrado'
+        });
+        return;
+      }
+
       const currentBalance = userDoc.data()?.balance || 0;
       const newBalance = currentBalance + amount;
       
-      console.log('Actualizando saldo en Firestore...');
-      console.log('  - Saldo actual:', currentBalance);
-      console.log('  - Incremento:', amount);
-      console.log('  - Nuevo saldo:', newBalance);
+      console.log('Actualizando saldo...');
+      console.log('  - Actual:', currentBalance);
+      console.log('  - Nuevo:', newBalance);
       
-      // 2. Actualizar saldo del usuario
+      // Actualizar saldo
       await db.collection('users').doc(userId).update({
         balance: admin.firestore.FieldValue.increment(amount),
         lastRecharge: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
-      console.log('Saldo actualizado');
       
-      // 3. Guardar transacción
-      console.log('Guardando transacción...');
+      // Guardar transacción
       await db.collection('transactions').add({
         userId,
         userEmail: authenticatedUser.email,
@@ -125,9 +119,10 @@ router.post(
         method: 'simulated',
         paymentId: paymentId,
         status: 'approved',
-        description: `Recarga de saldo - ${userName}`,
+        description: `Recarga simulada`,
         createdAt: admin.firestore.FieldValue.serverTimestamp()
       });
+      
       console.log('Transacción guardada');
       
       res.json({
@@ -137,7 +132,7 @@ router.post(
       });
       
     } catch (error: any) {
-      console.error('❌ Error al simular pago:', error);
+      console.error('Error:', error);
       res.status(500).json({
         success: false,
         message: 'Error al procesar el pago',
@@ -147,98 +142,75 @@ router.post(
   }
 );
 
-// OBTENER HISTORIAL DE TRANSACCIONES
-router.get(
-  '/transactions', 
-  authMiddleware,
-  async (req: Request, res: Response) => {
-    const authenticatedUser = (req as any).user;
+// Obtener saldo
+router.get('/balance', authMiddleware, async (req: Request, res: Response) => {
+  const authenticatedUser = (req as any).user;
+  
+  try {
+    const userDoc = await db.collection('users').doc(authenticatedUser.uid).get();
     
-    try {
-      console.log('Obteniendo transacciones del usuario:', authenticatedUser.uid);
-      
-      const transactionsSnapshot = await db.collection('transactions')
-        .where('userId', '==', authenticatedUser.uid)
-        .orderBy('createdAt', 'desc')
-        .limit(50)
-        .get();
-      
-      // TIPAR EL PARÁMETRO 'doc'
-      const transactions = transactionsSnapshot.docs.map((doc: admin.firestore.QueryDocumentSnapshot) => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate().toISOString()
-      }));
-      
-      console.log('Transacciones encontradas:', transactions.length);
-      
-      res.json({
-        success: true,
-        transactions
-      });
-      
-    } catch (error: any) {
-      console.error('Error al obtener transacciones:', error);
-      res.status(500).json({
+    if (!userDoc.exists) {
+      res.status(404).json({
         success: false,
-        message: 'Error al obtener historial de transacciones',
-        error: error.message
+        message: 'Usuario no encontrado'
       });
+      return;
     }
-  }
-);
-
-// OBTENER SALDO ACTUAL
-router.get(
-  '/balance', 
-  authMiddleware,
-  async (req: Request, res: Response) => {
-    const authenticatedUser = (req as any).user;
     
-    try {
-      console.log('Obteniendo saldo del usuario:', authenticatedUser.uid);
-      
-      const userDoc = await db.collection('users').doc(authenticatedUser.uid).get();
-      
-      if (!userDoc.exists) {
-        res.status(404).json({
-          success: false,
-          message: 'Usuario no encontrado'
-        });
-        return;
-      }
-      
-      const balance = userDoc.data()?.balance || 0;
-      
-      console.log('Saldo:', balance);
-      
-      res.json({
-        success: true,
-        balance,
-        userId: authenticatedUser.uid
-      });
-      
-    } catch (error: any) {
-      console.error('Error al obtener saldo:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error al obtener saldo',
-        error: error.message
-      });
-    }
+    const balance = userDoc.data()?.balance || 0;
+    
+    res.json({
+      success: true,
+      balance,
+      userId: authenticatedUser.uid
+    });
+    
+  } catch (error: any) {
+    console.error('Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener saldo'
+    });
   }
-);
+});
 
-// RUTA DE PRUEBA PÚBLICA
-interface TestResponse {
-  success: boolean;
-  message: string;
-}
+// Obtener transacciones
+router.get('/transactions', authMiddleware, async (req: Request, res: Response) => {
+  const authenticatedUser = (req as any).user;
+  
+  try {
+    const transactionsSnapshot = await db.collection('transactions')
+      .where('userId', '==', authenticatedUser.uid)
+      .orderBy('createdAt', 'desc')
+      .limit(50)
+      .get();
+    
+    const transactions = transactionsSnapshot.docs.map((doc: admin.firestore.QueryDocumentSnapshot) => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate().toISOString()
+    }));
+    
+    res.json({
+      success: true,
+      transactions
+    });
+    
+  } catch (error: any) {
+    console.error('Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener transacciones'
+    });
+  }
+});
 
-router.get('/test', (req: Request, res: Response<TestResponse>) => {
+// Ruta de prueba
+router.get('/test', (req: Request, res: Response) => {
   res.json({
     success: true,
-    message: 'API de pagos funcionando'
+    message: 'API de pagos funcionando',
+    payment_methods: ['simulated']
   });
 });
 

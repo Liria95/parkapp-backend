@@ -6,7 +6,6 @@ console.log('Directorio de trabajo:', process.cwd());
 console.log('FIREBASE_PROJECT_ID:', process.env.FIREBASE_PROJECT_ID || 'NO ENCONTRADO');
 console.log('FIREBASE_API_KEY:', process.env.FIREBASE_API_KEY ? 'Configurado' : 'NO ENCONTRADO');
 console.log('FIREBASE_APP_ID:', process.env.FIREBASE_APP_ID ? 'Configurado' : 'NO ENCONTRADO');
-console.log('MERCADOPAGO_ACCESS_TOKEN:', process.env.MERCADOPAGO_ACCESS_TOKEN ? 'Configurado' : 'NO ENCONTRADO'); // ✅ NUEVO
 console.log('================================================\n');
 
 // Si las variables no están, mostrar error
@@ -78,10 +77,6 @@ app.get('/api/health', (req, res) => {
       cloudName: process.env.CLOUDINARY_CLOUD_NAME || 'NOT_CONFIGURED',
       configured: !!process.env.CLOUDINARY_API_KEY
     },
-    mercadopago: { 
-      configured: !!process.env.MERCADOPAGO_ACCESS_TOKEN,
-      accessTokenPreview: process.env.MERCADOPAGO_ACCESS_TOKEN?.substring(0, 30) + '...'
-    },
     env: {
       nodeEnv: process.env.NODE_ENV || 'development',
       port: process.env.PORT || 3000
@@ -116,9 +111,9 @@ app.use((req, res) => {
       
       // Payments
       'GET /api/payments/test',
-      'POST /api/payments/create-payment',
-      'POST /api/payments/webhook',
-      'GET /api/payments/payment-status/:paymentId',
+      'POST /api/payments/simulate-payment',
+      'GET /api/payments/balance',
+      'GET /api/payments/transactions',
     ]
   });
 });
@@ -144,7 +139,6 @@ app.listen(PORT, () => {
   console.log(`Notifications: http://localhost:${PORT}/api/notifications`);
   console.log(`Payments: http://localhost:${PORT}/api/payments`);
   console.log(`Firebase Project: ${process.env.FIREBASE_PROJECT_ID || 'NOT_CONFIGURED'}`);
-  console.log(`Mercado Pago: ${process.env.MERCADOPAGO_ACCESS_TOKEN ? 'Configurado' : 'NO CONFIGURADO'}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
