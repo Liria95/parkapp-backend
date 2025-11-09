@@ -1,9 +1,36 @@
+// server/src/routes/payment.routes.ts
 import { Router, Request, Response } from 'express';
 import { db } from '../config/firebaseAdmin';
 import admin from 'firebase-admin';
 import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
+
+// Middleware para verificar que el usuario es admin
+const adminMiddleware = async (req: Request, res: Response, next: Function) => {
+  const authenticatedUser = (req as any).user;
+  
+  try {
+    const userDoc = await db.collection('users').doc(authenticatedUser.uid).get();
+    const userData = userDoc.data();
+    
+    if (!userData?.isAdmin) {
+      res.status(403).json({
+        success: false,
+        message: 'Acceso denegado. Se requieren permisos de administrador'
+      });
+      return;
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Error al verificar admin:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al verificar permisos'
+    });
+  }
+};
 
 // Interfaces
 interface SimulatePaymentRequest {
@@ -212,6 +239,91 @@ router.get('/test', (req: Request, res: Response) => {
     message: 'API de pagos funcionando',
     payment_methods: ['simulated']
   });
+});
+
+// Obtener estadísticas de transacciones del día (solo admin)
+router.get('/stats/today', authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
+  try {
+    console.log('Obteniendo estadísticas del día...');
+    
+    // Obtener inicio y fin del día actual
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    
+    console.log('Rango de fechas:');
+    console.log('- Inicio:', startOfDay.toISOString());
+    console.log('- Fin:', endOfDay.toISOString());
+    
+    // Obtener TODAS las transacciones y filtrar manualmente (evita problema de índices)
+    const transactionsSnapshot = await db.collection('transactions')
+      .orderBy('createdAt', 'desc')
+      .get();
+    
+    let totalIncome = 0;
+    let rechargesCount = 0;
+    let parkingExpenses = 0;
+    let parkingCount = 0;
+    let todayTransactions = 0;
+    
+    transactionsSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      
+      // Verificar si la transacción es de hoy
+      if (data.createdAt) {
+        const transactionDate = data.createdAt.toDate();
+        
+        // Solo procesar transacciones de HOY
+        if (transactionDate >= startOfDay && transactionDate <= endOfDay) {
+          todayTransactions++;
+          const amount = data.amount || 0;
+          
+          console.log(`Transacción del día:`, {
+            type: data.type,
+            amount: amount,
+            date: transactionDate.toISOString()
+          });
+          
+          if (data.type === 'recharge' && amount > 0) {
+            // Solo contar recargas positivas (ingresos reales)
+            totalIncome += amount;
+            rechargesCount++;
+          } else if (data.type === 'parking' && amount < 0) {
+            // Gastos de estacionamiento
+            parkingExpenses += Math.abs(amount);
+            parkingCount++;
+          }
+        }
+      }
+    });
+    
+    console.log('Resumen del día:');
+    console.log('- Transacciones totales hoy:', todayTransactions);
+    console.log('- Ingresos (recargas):', totalIncome);
+    console.log('- Cantidad de recargas:', rechargesCount);
+    console.log('- Gastos estacionamiento:', parkingExpenses);
+    console.log('- Cantidad de estacionamientos:', parkingCount);
+    
+    res.json({
+      success: true,
+      stats: {
+        totalIncome: totalIncome.toFixed(2),
+        rechargesCount,
+        parkingExpenses: parkingExpenses.toFixed(2),
+        parkingCount,
+        netIncome: (totalIncome - parkingExpenses).toFixed(2),
+        todayTransactions
+      }
+    });
+    
+  } catch (error: any) {
+    console.error('Error al obtener estadísticas del día:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener estadísticas del día',
+      error: error.message
+    });
+  }
 });
 
 export default router;

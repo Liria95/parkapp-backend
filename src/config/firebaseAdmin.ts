@@ -1,4 +1,3 @@
-// server/src/config/firebaseAdmin.ts
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -32,11 +31,11 @@ if (!admin.apps.length) {
       storageBucket: process.env.FIREBASE_STORAGE_BUCKET
     });
     
-    console.log('✅ Firebase Admin SDK inicializado correctamente');
-    console.log(`📁 Proyecto: ${serviceAccount.project_id}`);
+    console.log('Firebase Admin SDK inicializado correctamente');
+    console.log(`Proyecto: ${serviceAccount.project_id}`);
     
   } catch (error: any) {
-    console.error('❌ Error al inicializar Firebase Admin:', error.message);
+    console.error('Error al inicializar Firebase Admin:', error.message);
     throw error;
   }
 }

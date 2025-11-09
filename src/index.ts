@@ -26,6 +26,9 @@ import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import notificationRoutes from './routes/notification.routes';
 import paymentRoutes from './routes/payments.routes';
+import finesRoutes from './routes/fines.routes';
+import userProfileRoutes from './routes/user-profile.routes';
+import notificationsUserRoutes from './routes/notifications-user.routes';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,7 +48,10 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/payments', paymentRoutes); 
+app.use('/api/payments', paymentRoutes);
+app.use('/api/fines', finesRoutes);
+app.use('/api/user-profile', userProfileRoutes);
+app.use('/api/notifications-user', notificationsUserRoutes);
 
 // RUTA RAÍZ
 app.get('/', (req, res) => {
@@ -58,6 +64,9 @@ app.get('/', (req, res) => {
       users: '/api/users',
       notifications: '/api/notifications',
       payments: '/api/payments',
+      fines: '/api/fines',
+      userProfile: '/api/user-profile',
+      notificationsUser: '/api/notifications-user',
       health: '/api/health'
     }
   });
@@ -104,16 +113,35 @@ app.use((req, res) => {
       'POST /api/users/profile-photo',
       'DELETE /api/users/profile-photo',
       
+      // User Profile (NUEVO)
+      'GET /api/user-profile/:userId',
+      'PUT /api/user-profile/:userId',
+      'DELETE /api/user-profile/:userId',
+      
       // Notifications
       'POST /api/notifications/register',
       'POST /api/notifications/send',
       'POST /api/notifications/broadcast',
+      
+      // Notifications User (NUEVO)
+      'GET /api/notifications-user/user/:userId',
+      'PUT /api/notifications-user/:notificationId/read',
+      'PUT /api/notifications-user/user/:userId/read-all',
+      'DELETE /api/notifications-user/:notificationId',
       
       // Payments
       'GET /api/payments/test',
       'POST /api/payments/simulate-payment',
       'GET /api/payments/balance',
       'GET /api/payments/transactions',
+      
+      // Fines
+      'GET /api/fines/all',
+      'GET /api/fines/user/:userId',
+      'POST /api/fines/create',
+      'PUT /api/fines/:fineId/status',
+      'POST /api/fines/:fineId/pay',
+      'GET /api/fines/stats/overview',
     ]
   });
 });
@@ -131,13 +159,16 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 // INICIAR SERVIDOR
 app.listen(PORT, () => {
-  console.log(`Servidor corriendo en puerto ${PORT}`);
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
   console.log(`API Base: http://localhost:${PORT}`);
   console.log(`Health: http://localhost:${PORT}/api/health`);
   console.log(`Auth: http://localhost:${PORT}/api/auth`);
   console.log(`Users: http://localhost:${PORT}/api/users`);
+  console.log(`User Profile: http://localhost:${PORT}/api/user-profile`);
   console.log(`Notifications: http://localhost:${PORT}/api/notifications`);
+  console.log(`Notifications User: http://localhost:${PORT}/api/notifications-user`);
   console.log(`Payments: http://localhost:${PORT}/api/payments`);
+  console.log(`Fines: http://localhost:${PORT}/api/fines`);
   console.log(`Firebase Project: ${process.env.FIREBASE_PROJECT_ID || 'NOT_CONFIGURED'}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
