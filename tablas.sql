@@ -20,7 +20,7 @@ CREATE TABLE vehicles (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     license_plate VARCHAR(20) NOT NULL,
-    UNIQUE(user_id, license_plate)
+    UNIQUE(user_id, license_plate)Ñ
 );
 
 -- TABLA: street_parking (Zonas amplias - ej: "Zona Centro", "Microcentro")

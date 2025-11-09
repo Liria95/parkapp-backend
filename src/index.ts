@@ -159,7 +159,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 // INICIAR SERVIDOR
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+  console.log(`Servidor corriendo en puerto ${PORT}`);
   console.log(`API Base: http://localhost:${PORT}`);
   console.log(`Health: http://localhost:${PORT}/api/health`);
   console.log(`Auth: http://localhost:${PORT}/api/auth`);
