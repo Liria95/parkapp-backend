@@ -68,6 +68,44 @@ const adminMiddleware = async (req: Request, res: Response, next: Function) => {
 
 // RUTAS DE USUARIO (Requieren autenticación)
 
+//Obtener saldo del usuario actual
+router.get('/balance', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const authenticatedUser = (req as any).user;
+    const userId = authenticatedUser.uid;
+
+    console.log('Obteniendo saldo para usuario:', userId);
+
+    const userRef = db.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+    }
+
+    const userData = userDoc.data();
+    const balance = userData?.balance || 0;
+
+    console.log('Saldo obtenido:', balance);
+
+    res.json({
+      success: true,
+      balance
+    });
+
+  } catch (error) {
+    console.error('Error al obtener saldo:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener saldo',
+      error: error instanceof Error ? error.message : 'Error desconocido'
+    });
+  }
+});
+
 // Obtener perfil del usuario actual
 router.get('/profile', authMiddleware, UserController.getProfile);
 

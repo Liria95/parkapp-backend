@@ -1,6 +1,3 @@
-// server/scripts/create-fine-for-liria.ts
-// Script para crear multa para Liria Olivera
-
 import admin from 'firebase-admin';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
