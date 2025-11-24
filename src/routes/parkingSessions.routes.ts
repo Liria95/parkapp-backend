@@ -218,9 +218,12 @@ router.post('/end', authMiddleware, async (req: Request, res: Response) => {
     const startTime = sessionData.startTime.toDate();
     const endTime = new Date();
     const durationMs = endTime.getTime() - startTime.getTime();
-    const durationHours = Math.ceil(durationMs / (1000 * 60 * 60));
-
+    //const durationHours = Math.ceil(durationMs / (1000 * 60 * 60));
+    const durationSeconds = durationMs / 1000;
+    const durationHours = Number((durationSeconds / 3600).toFixed(2));
     const feePerHour = sessionData.feePerHour || 50;
+
+    //const totalCost = Number(((durationSeconds / 3600) * feePerHour).toFixed(2));
     const totalCost = durationHours * feePerHour;
 
     console.log('Duración:', durationHours);
