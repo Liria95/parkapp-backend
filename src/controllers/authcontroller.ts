@@ -14,7 +14,7 @@ export class AuthController {
     const { name, surname, email, phone, password } = req.body;
 
     try {
-      // Validaciones (igual que antes)
+      // Validaciones
       if (!name || !surname || !email || !phone || !password) {
         res.status(400).json({
           success: false,
@@ -41,7 +41,6 @@ export class AuthController {
       }
 
       // FIREBASE: Crear usuario en Authentication
-      // (Firebase maneja automáticamente la validación de email duplicado)
       const userCredential: UserCredential = await createUserWithEmailAndPassword(
         auth, 
         email, 
@@ -149,7 +148,7 @@ export class AuthController {
       // 🔥 Obtener token de Firebase
       const token = await userCredential.user.getIdToken();
 
-      console.log('✅ Login exitoso:', userId);
+      console.log(' Login exitoso:', userId);
 
       res.status(200).json({
         success: true,
@@ -211,7 +210,6 @@ export class AuthController {
       }
 
       // El middleware authMiddleware ya verificó el token con Firebase Admin
-      // Solo necesitamos obtener los datos actualizados del usuario
       const userId = (req as any).user.uid;
 
       const userDoc = await getDoc(doc(db, 'users', userId));
@@ -248,7 +246,6 @@ export class AuthController {
   static async logout(req: Request, res: Response): Promise<void> {
     try {
       // Firebase maneja el logout en el cliente
-      // Aquí se podría invalidar el token si usamos una lista negra
       
       res.status(200).json({
         success: true,

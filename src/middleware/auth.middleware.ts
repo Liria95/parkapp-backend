@@ -2,18 +2,17 @@ import { Request, Response, NextFunction } from 'express';
 import admin from '../config/firebaseAdmin';
 import NodeCache from 'node-cache';
 
-// ============================================
-// CACHÉ DE TOKENS
-// ============================================
+// CACHÉ DE TOKENS CON TTL EXTENDIDO
 const tokenCache = new NodeCache({ 
-  stdTTL: 300,          
-  checkperiod: 60,       
+  stdTTL: 3600,          // 1 HORA (antes: 5 minutos)
+  checkperiod: 120,      // Revisar cada 2 minutos
   useClones: false       
 });
 
 let cacheHits = 0;
 let cacheMisses = 0;
 
+// Resetear stats cada hora
 setInterval(() => {
   const stats = getCacheStats();
   console.log('Stats del caché (última hora):', stats);
@@ -29,12 +28,10 @@ export const authMiddleware = async (
 ): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
-    console.log('Authorization header:', authHeader ? 'Presente' : 'Ausente');
-
     const token = authHeader?.split(' ')[1];
    
     if (!token) {
-      console.log('No se proporcionó token');
+      console.log('❌ No se proporcionó token');
       res.status(401).json({
         success: false,
         message: 'Token no proporcionado'
@@ -46,25 +43,20 @@ export const authMiddleware = async (
     const cachedUser = tokenCache.get<any>(token);
 
     if (cachedUser) {
-      // TOKEN ENCONTRADO EN CACHÉ
+      // TOKEN ENCONTRADO EN CACHÉ - NO GASTA CUOTA DE FIREBASE
       cacheHits++;
-      const hitRate = ((cacheHits / (cacheHits + cacheMisses)) * 100).toFixed(1);
-      console.log(`Token en caché (hit ${cacheHits}/${cacheHits + cacheMisses} = ${hitRate}%)`);
-      
       (req as any).user = cachedUser;
       next();
       return;
     }
 
-    // TOKEN NO EN CACHÉ - VALIDAR CON FIREBASE
+    // TOKEN NO EN CACHÉ - VALIDAR CON FIREBASE (GASTA CUOTA)
     cacheMisses++;
-    console.log(`Validando token con Firebase (miss ${cacheMisses}/${cacheHits + cacheMisses})`);
-    console.log('Verificando token con Firebase Admin...');
+    console.log(` Validando con Firebase (miss ${cacheMisses})`);
 
     const decodedToken = await admin.auth().verifyIdToken(token);
    
-    console.log('Token válido. Usuario ID:', decodedToken.uid);
-    console.log('Email:', decodedToken.email);
+    console.log('Token válido:', decodedToken.email);
    
     const userDoc = await admin.firestore()
       .collection('users')
@@ -90,22 +82,16 @@ export const authMiddleware = async (
       surname: userData?.surname
     };
 
-    console.log('Usuario autenticado:', {
-      uid: decodedToken.uid,
-      email: decodedToken.email,
-      isAdmin: userData?.isAdmin || false
-    });
-
-    //  GUARDAR EN CACHÉ POR 5 MINUTOS
+    // GUARDAR EN CACHÉ POR 1 HORA
     tokenCache.set(token, userObject);
-    console.log(` Token guardado en caché para: ${decodedToken.email} (expira en 5 min)`);
+    console.log(`Token guardado en caché: ${decodedToken.email} (1h)`);
 
     (req as any).user = userObject;
     next();
 
   } catch (error: any) {
-    console.error(' Error al verificar token:', error.message);
-    console.error('Código de error:', error.code);
+    console.error('Error al verificar token:', error.message);
+    console.error('Código:', error.code);
    
     // Invalidar token del caché si hay error
     const authHeaderError = req.headers.authorization;
@@ -131,6 +117,12 @@ export const authMiddleware = async (
       res.status(401).json({
         success: false,
         message: 'Token revocado. Por favor, inicia sesión nuevamente'
+      });
+    } else if (error.code === 8 || error.message.includes('RESOURCE_EXHAUSTED')) {
+      // CUOTA EXCEDIDA
+      res.status(503).json({
+        success: false,
+        message: 'Servicio temporalmente no disponible. Intenta en unos minutos.'
       });
     } else {
       res.status(401).json({
@@ -166,7 +158,6 @@ export const adminMiddleware = async (
       return;
     }
 
-    console.log('Admin verificado:', user.uid);
     next();
 
   } catch (error) {
@@ -219,9 +210,6 @@ export const ownerMiddleware = (resourceField: string = 'userId') => {
 
 // FUNCIONES AUXILIARES DEL CACHÉ
 
-/**
- * Invalidar token manualmente 
- */
 export const invalidateToken = (token: string): void => {
   const deleted = tokenCache.del(token);
   if (deleted) {
@@ -229,19 +217,13 @@ export const invalidateToken = (token: string): void => {
   }
 };
 
-/**
- * Limpiar toda la caché
- */
 export const clearTokenCache = (): void => {
   tokenCache.flushAll();
   cacheHits = 0;
   cacheMisses = 0;
-  console.log('Caché de tokens limpiada completamente');
+  console.log(' Caché de tokens limpiada completamente');
 };
 
-/**
- * Obtener estadísticas del caché
- */
 export const getCacheStats = () => {
   const stats = tokenCache.getStats();
   const hitRate = cacheHits + cacheMisses > 0 
@@ -261,9 +243,6 @@ export const getCacheStats = () => {
   };
 };
 
-/**
- * Endpoint para ver estadísticas
- */
 export const statsEndpoint = (req: Request, res: Response) => {
   const stats = getCacheStats();
   res.json({

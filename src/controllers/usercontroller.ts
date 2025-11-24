@@ -9,7 +9,7 @@ export class UserController {
   // ========== SUBIR FOTO DE PERFIL A CLOUDINARY ==========
   static async updateProfilePhoto(req: Request, res: Response): Promise<void> {
     try {
-      const userId = (req as any).user.uid; // ← Cambio principal: uid en vez de userId
+      const userId = (req as any).user.uid;
       const file = req.file;
 
       if (!file) {
@@ -24,7 +24,7 @@ export class UserController {
       console.log('Archivo temporal:', file.path);
       console.log('Cloud Name:', process.env.CLOUDINARY_CLOUD_NAME);
 
-      // Subir a Cloudinary (igual que antes)
+      // Subir a Cloudinary 
       const result = await cloudinary.uploader.upload(file.path, {
         folder: 'parkapp/profiles',
         public_id: `user-${userId}`,
@@ -48,12 +48,12 @@ export class UserController {
         console.log('No se pudo eliminar archivo temporal');
       }
 
-      // Guardar URL en Firestore (en vez de PostgreSQL)
+      // Guardar URL en Firestore 
       await updateDoc(doc(db, 'users', userId), {
         avatar: photoUrl
       });
 
-      console.log('💾 URL guardada en Firestore');
+      console.log('URL guardada en Firestore');
 
       res.json({ 
         success: true, 
@@ -75,9 +75,9 @@ export class UserController {
   // ========== OBTENER PERFIL ==========
   static async getProfile(req: Request, res: Response): Promise<void> {
     try {
-      const userId = (req as any).user.uid; // ← uid de Firebase
+      const userId = (req as any).user.uid;
 
-      // Obtener de Firestore (en vez de PostgreSQL)
+      // Obtener de Firestore 
       const userDoc = await getDoc(doc(db, 'users', userId));
 
       if (!userDoc.exists()) {

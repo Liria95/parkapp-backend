@@ -1,4 +1,3 @@
-// src/controllers/adminSetupController.ts
 import { Request, Response } from 'express';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -7,12 +6,12 @@ import { adminAuth, adminDb } from '../config/firebaseAdmin';
 
 export class AdminSetupController {
   
-  // ⚠️ USAR SOLO EN DESARROLLO - ELIMINAR EN PRODUCCIÓN
+  // USAR SOLO EN DESARROLLO - ELIMINAR EN PRODUCCIÓN
   static async createAdmin(req: Request, res: Response): Promise<void> {
     try {
       const { name, surname, email, phone, password, secretKey } = req.body;
 
-      // 🔒 Protección: Requerir clave secreta
+      // Protección: Requerir clave secreta
       if (secretKey !== process.env.ADMIN_SETUP_SECRET) {
         res.status(403).json({
           success: false,
@@ -38,7 +37,7 @@ export class AdminSetupController {
         return;
       }
 
-      console.log('🔐 Creando admin:', email);
+      console.log(' Creando admin:', email);
 
       // 1. Crear usuario en Firebase Auth usando Admin SDK
       const userRecord = await adminAuth.createUser({
@@ -47,7 +46,7 @@ export class AdminSetupController {
         displayName: `${name} ${surname}`,
       });
 
-      console.log('✅ Admin creado en Auth:', userRecord.uid);
+      console.log('Admin creado en Auth:', userRecord.uid);
 
       // 2. Guardar en Firestore con isAdmin: true
       await adminDb.collection('users').doc(userRecord.uid).set({
@@ -55,7 +54,7 @@ export class AdminSetupController {
         surname: surname,
         email: email,
         phone: phone,
-        isAdmin: true,  // ← IMPORTANTE
+        isAdmin: true,
         balance: 0,
         avatar: null,
         createdAt: new Date().toISOString(),
@@ -75,7 +74,7 @@ export class AdminSetupController {
       });
 
     } catch (error: any) {
-      console.error('❌ Error al crear admin:', error);
+      console.error('Error al crear admin:', error);
       
       let message = 'Error al crear admin';
       if (error.code === 'auth/email-already-exists') {
@@ -99,7 +98,7 @@ export class AdminSetupController {
     try {
       const { userId, secretKey } = req.body;
 
-      // 🔒 Protección: Requerir clave secreta
+      //  Protección: Requerir clave secreta
       if (secretKey !== process.env.ADMIN_SETUP_SECRET) {
         res.status(403).json({
           success: false,
@@ -116,14 +115,14 @@ export class AdminSetupController {
         return;
       }
 
-      console.log('👑 Convirtiendo usuario a admin:', userId);
+      console.log(' Convirtiendo usuario a admin:', userId);
 
       // Actualizar Firestore
       await adminDb.collection('users').doc(userId).update({
         isAdmin: true,
       });
 
-      console.log('✅ Usuario convertido a admin');
+      console.log(' Usuario convertido a admin');
 
       res.json({
         success: true,
@@ -131,7 +130,7 @@ export class AdminSetupController {
       });
 
     } catch (error: any) {
-      console.error('❌ Error:', error);
+      console.error('Error:', error);
       res.status(500).json({
         success: false,
         message: 'Error al actualizar usuario',

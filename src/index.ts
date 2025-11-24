@@ -23,11 +23,11 @@ import './config/firebaseAdmin';
 // Importar rutas
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
-import notificationRoutes from './routes/notification.routes';
+import pushNotificationsRoutes from './routes/pushNotifications.routes';
+import userNotificationsRoutes from './routes/userNotifications.routes';
 import paymentRoutes from './routes/payments.routes';
 import finesRoutes from './routes/fines.routes';
 import userProfileRoutes from './routes/user-profile.routes';
-import notificationsUserRoutes from './routes/notifications-user.routes';
 import manualRegistrationRoutes from './routes/manualRegistration.routes';
 import parkingSpacesRoutes from './routes/parkingSpaces.routes';
 import parkingSessionsRoutes from './routes/parkingSessions.routes';
@@ -49,11 +49,11 @@ app.use((req, res, next) => {
 // RUTAS
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/notifications', notificationRoutes);
+app.use('/api/notifications', pushNotificationsRoutes);
+app.use('/api/notifications-user', userNotificationsRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/fines', finesRoutes);
 app.use('/api/user-profile', userProfileRoutes);
-app.use('/api/notifications-user', notificationsUserRoutes);
 app.use('/api/manual-registration', manualRegistrationRoutes);
 app.use('/api/parking-spaces', parkingSpacesRoutes);
 app.use('/api/parking-sessions', parkingSessionsRoutes);
@@ -68,10 +68,10 @@ app.get('/', (req, res) => {
       auth: '/api/auth',
       users: '/api/users',
       notifications: '/api/notifications',
+      notificationsUser: '/api/notifications-user',
       payments: '/api/payments',
       fines: '/api/fines',
       userProfile: '/api/user-profile',
-      notificationsUser: '/api/notifications-user',
       manualRegistration: '/api/manual-registration',
       parkingSpaces: '/api/parking-spaces',
       parkingSessions: '/api/parking-sessions',
@@ -127,12 +127,12 @@ app.use((req, res) => {
       'PUT /api/user-profile/:userId',
       'DELETE /api/user-profile/:userId',
 
-      // Notifications
+      // Push Notifications (Expo)
       'POST /api/notifications/register',
       'POST /api/notifications/send',
       'POST /api/notifications/broadcast',
 
-      // Notifications User
+      // User Notifications (Database)
       'GET /api/notifications-user/user/:userId',
       'PUT /api/notifications-user/:notificationId/read',
       'PUT /api/notifications-user/user/:userId/read-all',
@@ -145,23 +145,19 @@ app.use((req, res) => {
       'GET /api/payments/transactions',
 
       // Fines
+      'POST /api/fines/create',
       'GET /api/fines/all',
       'GET /api/fines/user/:userId',
-      'POST /api/fines/create',
-      'PUT /api/fines/:fineId/status',
       'POST /api/fines/:fineId/pay',
-      'GET /api/fines/stats/overview',
 
       // Manual Registration
       'GET /api/manual-registration/search-by-plate/:licensePlate',
       'GET /api/manual-registration/available-spaces',
-      'GET /api/manual-registration/user/:userId/vehicles',
-      'POST /api/manual-registration/register-user',
       'POST /api/manual-registration/register-visitor',
-      'POST /api/manual-registration/end-session/:sessionId',
-      'POST /api/manual-registration/end-visitor/:visitorId',
+      'POST /api/manual-registration/visitor-fine',
 
       // Parking Spaces
+      'GET /api/parking-spaces/available',
       'GET /api/parking-spaces/stats',
       'GET /api/parking-spaces',
 
@@ -169,7 +165,8 @@ app.use((req, res) => {
       'POST /api/parking-sessions/start',
       'POST /api/parking-sessions/end',
       'GET /api/parking-sessions/active',
-      'GET /api/parking-sessions/history'
+      'GET /api/parking-sessions/history',
+      'GET /api/parking-sessions/stats'
     ]
   });
 });
@@ -193,8 +190,8 @@ app.listen(PORT, () => {
   console.log('[AUTH] http://localhost:' + PORT + '/api/auth');
   console.log('[USERS] http://localhost:' + PORT + '/api/users');
   console.log('[USER PROFILE] http://localhost:' + PORT + '/api/user-profile');
-  console.log('[NOTIFICATIONS] http://localhost:' + PORT + '/api/notifications');
-  console.log('[NOTIFICATIONS USER] http://localhost:' + PORT + '/api/notifications-user');
+  console.log('[PUSH NOTIFICATIONS] http://localhost:' + PORT + '/api/notifications');
+  console.log('[USER NOTIFICATIONS] http://localhost:' + PORT + '/api/notifications-user');
   console.log('[PAYMENTS] http://localhost:' + PORT + '/api/payments');
   console.log('[FINES] http://localhost:' + PORT + '/api/fines');
   console.log('[MANUAL REGISTRATION] http://localhost:' + PORT + '/api/manual-registration');

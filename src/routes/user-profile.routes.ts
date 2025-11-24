@@ -6,12 +6,11 @@ import bcrypt from 'bcrypt';
 
 const router = Router();
 
-// Obtener datos del perfil del usuario
+// ========== OBTENER PERFIL ==========
 router.get('/:userId', authMiddleware, async (req: Request, res: Response) => {
   const { userId } = req.params;
   const authenticatedUser = (req as any).user;
   
-  // Verificar que el usuario consulta su propio perfil
   if (authenticatedUser.uid !== userId) {
     res.status(403).json({
       success: false,
@@ -57,13 +56,12 @@ router.get('/:userId', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
-// Actualizar datos del perfil
+// ========== ACTUALIZAR PERFIL ==========
 router.put('/:userId', authMiddleware, async (req: Request, res: Response) => {
   const { userId } = req.params;
   const authenticatedUser = (req as any).user;
   const { name, surname, phone, currentPassword, newPassword } = req.body;
   
-  // Verificar que el usuario actualiza su propio perfil
   if (authenticatedUser.uid !== userId) {
     res.status(403).json({
       success: false,
@@ -88,32 +86,26 @@ router.put('/:userId', authMiddleware, async (req: Request, res: Response) => {
     const userData = userDoc.data();
     const updateData: any = {};
     
-    // Actualizar nombre
     if (name && name.trim() !== '') {
       updateData.name = name.trim();
     }
     
-    // Actualizar apellido
     if (surname && surname.trim() !== '') {
       updateData.surname = surname.trim();
     }
     
-    // Actualizar teléfono
     if (phone && phone.trim() !== '') {
       updateData.phone = phone.trim();
     }
     
-    // Cambiar contraseña si se proporciona
     if (newPassword && newPassword.trim() !== '') {
       try {
-        // Actualizar contraseña en Firebase Auth
         await auth.updateUser(userId, {
           password: newPassword
         });
         
         console.log('Contraseña actualizada en Firebase Auth');
         
-        // Si también guarda password en Firestore (opcional)
         if (userData?.password) {
           const hashedPassword = await bcrypt.hash(newPassword, 10);
           updateData.password = hashedPassword;
@@ -137,12 +129,10 @@ router.put('/:userId', authMiddleware, async (req: Request, res: Response) => {
       return;
     }
     
-    // Actualizar en Firestore
     await db.collection('users').doc(userId).update(updateData);
     
     console.log('Perfil actualizado:', Object.keys(updateData));
     
-    // Obtener datos actualizados
     const updatedUserDoc = await db.collection('users').doc(userId).get();
     const updatedUserData = updatedUserDoc.data();
     
@@ -169,12 +159,11 @@ router.put('/:userId', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
-// Eliminar cuenta
+// ========== ELIMINAR CUENTA ==========
 router.delete('/:userId', authMiddleware, async (req: Request, res: Response) => {
   const { userId } = req.params;
   const authenticatedUser = (req as any).user;
   
-  // Verificar que el usuario elimina su propia cuenta
   if (authenticatedUser.uid !== userId) {
     res.status(403).json({
       success: false,
@@ -186,7 +175,6 @@ router.delete('/:userId', authMiddleware, async (req: Request, res: Response) =>
   try {
     console.log('Eliminando cuenta del usuario:', userId);
     
-    // Verificar que el usuario existe
     const userDoc = await db.collection('users').doc(userId).get();
     
     if (!userDoc.exists) {
@@ -197,7 +185,6 @@ router.delete('/:userId', authMiddleware, async (req: Request, res: Response) =>
       return;
     }
     
-    // No permitir eliminar si hay estacionamiento activo
     const activeParkingSnapshot = await db.collection('parking_sessions')
       .where('userId', '==', userId)
       .where('status', '==', 'active')
@@ -211,7 +198,6 @@ router.delete('/:userId', authMiddleware, async (req: Request, res: Response) =>
       return;
     }
     
-    // No permitir eliminar si hay multas pendientes
     const pendingFinesSnapshot = await db.collection('fines')
       .where('userId', '==', userId)
       .where('status', '==', 'pending')
@@ -225,51 +211,42 @@ router.delete('/:userId', authMiddleware, async (req: Request, res: Response) =>
       return;
     }
     
-    // Eliminar datos relacionados en Firestore
     const batch = db.batch();
     
-    // Eliminar notificaciones
     const notificationsSnapshot = await db.collection('notifications')
       .where('user_id', '==', userId)
       .get();
     notificationsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
     
-    // Eliminar sesiones de estacionamiento
     const sessionsSnapshot = await db.collection('parking_sessions')
       .where('userId', '==', userId)
       .get();
     sessionsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
     
-    // Eliminar transacciones
     const transactionsSnapshot = await db.collection('transactions')
       .where('userId', '==', userId)
       .get();
     transactionsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
     
-    // Eliminar vehículos
     const vehiclesSnapshot = await db.collection('vehicles')
       .where('userId', '==', userId)
       .get();
     vehiclesSnapshot.docs.forEach(doc => batch.delete(doc.ref));
     
-    // Eliminar multas
     const finesSnapshot = await db.collection('fines')
       .where('userId', '==', userId)
       .get();
     finesSnapshot.docs.forEach(doc => batch.delete(doc.ref));
     
-    // Eliminar el usuario
     batch.delete(userDoc.ref);
     
     await batch.commit();
     
-    // Eliminar de Firebase Auth
     try {
       await auth.deleteUser(userId);
       console.log('Usuario eliminado de Firebase Auth');
     } catch (authError) {
       console.error('Error al eliminar de Auth:', authError);
-      // Continuar aunque falle Auth
     }
     
     console.log('Cuenta eliminada completamente');
