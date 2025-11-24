@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 dotenv.config();
+import vehicleRoutes from './routes/vehicle.routes';
 
 console.log('\n===== VERIFICANDO VARIABLES DE ENTORNO =====');
 console.log('Directorio de trabajo:', process.cwd());
@@ -38,6 +39,7 @@ const PORT = process.env.PORT || 3000;
 // MIDDLEWARES
 app.use(cors());
 app.use(express.json());
+app.use('/api/vehicles', vehicleRoutes);
 app.use(express.urlencoded({ extended: true }));
 
 // Logging middleware

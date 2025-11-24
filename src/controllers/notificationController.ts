@@ -1,182 +1,272 @@
 import { Request, Response } from 'express';
-import { doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { NotificationService } from '../services/notificationService';
 
 export class NotificationController {
-  
-  // REGISTRAR TOKEN PUSH
-  static async registerPushToken(req: Request, res: Response): Promise<void> {
-    try {
-      const userId = (req as any).user.uid;
-      const { expoPushToken } = req.body;
+    private notificationService: NotificationService;
 
-      if (!expoPushToken) {
-        res.status(400).json({
-          success: false,
-          message: 'expoPushToken es requerido',
-        });
-        return;
-      }
-
-      console.log('Guardando token push para usuario:', userId);
-
-      // Guardar token en Firestore
-      await setDoc(doc(db, 'pushTokens', userId), {
-        userId: userId,
-        token: expoPushToken,
-        updatedAt: new Date().toISOString(),
-      });
-
-      res.json({
-        success: true,
-        message: 'Token registrado exitosamente',
-      });
-
-    } catch (error) {
-      console.error('Error al registrar token:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error al registrar token',
-      });
+    constructor() {
+        this.notificationService = new NotificationService();
     }
-  }
 
-  // ENVIAR NOTIFICACIÓN PUSH
-  static async sendPushNotification(req: Request, res: Response): Promise<void> {
-    try {
-      const { userId, title, body, data } = req.body;
+    // ==================== PUSH TOKENS ====================
 
-      if (!userId || !title || !body) {
-        res.status(400).json({
-          success: false,
-          message: 'userId, title y body son requeridos',
-        });
-        return;
-      }
+    // POST /api/notifications/register
+    registerPushToken = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const userId = (req as any).user.uid;
+            const { expoPushToken } = req.body;
 
-      // Obtener token del usuario
-      const tokenDoc = await getDoc(doc(db, 'pushTokens', userId));
+            if (!expoPushToken) {
+                res.status(400).json({
+                    success: false,
+                    message: 'expoPushToken es requerido',
+                });
+                return;
+            }
 
-      if (!tokenDoc.exists()) {
-        res.status(404).json({
-          success: false,
-          message: 'Token no encontrado para el usuario',
-        });
-        return;
-      }
+            console.log('Guardando token push para usuario:', userId);
 
-      const pushToken = tokenDoc.data().token;
+            const token = await this.notificationService.registerPushToken(userId, expoPushToken);
 
-      console.log('Enviando notificación push a:', userId);
+            res.json({
+                success: true,
+                message: 'Token registrado exitosamente',
+                token
+            });
 
-      // Enviar notificación a Expo Push API
-      const message = {
-        to: pushToken,
-        sound: 'default',
-        title: title,
-        body: body,
-        data: data || {},
-      };
+        } catch (error) {
+            console.error('Error al registrar token:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Error al registrar token',
+            });
+        }
+    };
 
-      const response = await fetch('https://exp.host/--/api/v2/push/send', {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Accept-encoding': 'gzip, deflate',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(message),
-      });
+    // DELETE /api/notifications/token
+    deletePushToken = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const userId = (req as any).user.uid;
 
-      const result = await response.json();
+            await this.notificationService.deletePushToken(userId);
 
-      if (result.data && result.data.status === 'ok') {
-        console.log('Notificación enviada exitosamente');
-        res.json({
-          success: true,
-          message: 'Notificación enviada',
-          result: result.data,
-        });
-      } else {
-        console.log('Error al enviar notificación:', result);
-        res.status(500).json({
-          success: false,
-          message: 'Error al enviar notificación',
-          error: result,
-        });
-      }
+            res.json({
+                success: true,
+                message: 'Token eliminado exitosamente'
+            });
 
-    } catch (error) {
-      console.error('Error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error al enviar notificación',
-      });
-    }
-  }
+        } catch (error) {
+            console.error('Error al eliminar token:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Error al eliminar token'
+            });
+        }
+    };
 
-  // ENVIAR NOTIFICACIÓN A TODOS LOS USUARIOS
-  static async sendBroadcastNotification(req: Request, res: Response): Promise<void> {
-    try {
-      const { title, body, data } = req.body;
+    // ==================== ENVIAR PUSH ====================
 
-      if (!title || !body) {
-        res.status(400).json({
-          success: false,
-          message: 'title y body son requeridos',
-        });
-        return;
-      }
+    // POST /api/notifications/send
+    sendPushNotification = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { userId, title, body, data } = req.body;
 
-      // Obtener todos los tokens
-      const tokensSnapshot = await getDocs(collection(db, 'pushTokens'));
-      const pushTokens = tokensSnapshot.docs.map(doc => doc.data().token);
+            if (!userId || !title || !body) {
+                res.status(400).json({
+                    success: false,
+                    message: 'userId, title y body son requeridos',
+                });
+                return;
+            }
 
-      if (pushTokens.length === 0) {
-        res.status(404).json({
-          success: false,
-          message: 'No hay tokens registrados',
-        });
-        return;
-      }
+            console.log('Enviando notificación push a:', userId);
 
-      console.log(`Enviando notificación broadcast a ${pushTokens.length} dispositivos`);
+            const result = await this.notificationService.sendPushNotification(userId, title, body, data);
 
-      // Preparar mensajes
-      const messages = pushTokens.map(token => ({
-        to: token,
-        sound: 'default',
-        title: title,
-        body: body,
-        data: data || {},
-      }));
+            if (result.data && result.data.status === 'ok') {
+                console.log('Notificación enviada exitosamente');
+                res.json({
+                    success: true,
+                    message: 'Notificación enviada',
+                    result: result.data,
+                });
+            } else {
+                console.log('Error al enviar notificación:', result);
+                res.status(500).json({
+                    success: false,
+                    message: 'Error al enviar notificación',
+                    error: result,
+                });
+            }
 
-      // Enviar en batch
-      const response = await fetch('https://exp.host/--/api/v2/push/send', {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Accept-encoding': 'gzip, deflate',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(messages),
-      });
+        } catch (error: any) {
+            console.error('Error:', error);
+            res.status(500).json({
+                success: false,
+                message: error.message || 'Error al enviar notificación',
+            });
+        }
+    };
 
-      const result = await response.json();
+    // POST /api/notifications/broadcast
+    sendBroadcastNotification = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { title, body, data } = req.body;
 
-      console.log('Notificación broadcast enviada');
-      res.json({
-        success: true,
-        message: `Notificación enviada a ${pushTokens.length} dispositivos`,
-        result: result,
-      });
+            if (!title || !body) {
+                res.status(400).json({
+                    success: false,
+                    message: 'title y body son requeridos',
+                });
+                return;
+            }
 
-    } catch (error) {
-      console.error('Error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error al enviar notificación broadcast',
-      });
-    }
-  }
+            console.log('Enviando notificación broadcast');
+
+            const result = await this.notificationService.sendBroadcastNotification(title, body, data);
+
+            const pushTokens = await this.notificationService.getAllPushTokens();
+
+            console.log('Notificación broadcast enviada');
+            res.json({
+                success: true,
+                message: `Notificación enviada a ${pushTokens.length} dispositivos`,
+                result,
+            });
+
+        } catch (error: any) {
+            console.error('Error:', error);
+            res.status(500).json({
+                success: false,
+                message: error.message || 'Error al enviar notificación broadcast',
+            });
+        }
+    };
+
+    // ==================== GESTIÓN DE NOTIFICACIONES ====================
+
+    // GET /api/notifications-user/user/:userId
+    getUserNotifications = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { userId } = req.params;
+            const authenticatedUser = (req as any).user;
+
+            if (authenticatedUser.uid !== userId) {
+                res.status(403).json({
+                    success: false,
+                    message: 'No tienes permiso para ver estas notificaciones'
+                });
+                return;
+            }
+
+            console.log('Obteniendo notificaciones del usuario:', userId);
+
+            const notifications = await this.notificationService.getUserNotifications(userId);
+
+            const unread = notifications.filter((n: any) => !n.is_read).length;
+
+            console.log('Notificaciones encontradas:', notifications.length);
+
+            res.json({
+                success: true,
+                notifications,
+                total: notifications.length,
+                unread
+            });
+
+        } catch (error) {
+            console.error('Error al obtener notificaciones:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Error al obtener notificaciones'
+            });
+        }
+    };
+
+    // PUT /api/notifications-user/:notificationId/read
+    markAsRead = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { notificationId } = req.params;
+            const authenticatedUser = (req as any).user;
+
+            console.log('Marcando notificación como leída:', notificationId);
+
+            await this.notificationService.markAsRead(notificationId, authenticatedUser.uid);
+
+            console.log('Notificación marcada como leída');
+
+            res.json({
+                success: true,
+                message: 'Notificación marcada como leída'
+            });
+
+        } catch (error: any) {
+            console.error('Error al marcar notificación:', error);
+            res.status(500).json({
+                success: false,
+                message: error.message || 'Error al marcar notificación como leída'
+            });
+        }
+    };
+
+    // PUT /api/notifications-user/user/:userId/read-all
+    markAllAsRead = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { userId } = req.params;
+            const authenticatedUser = (req as any).user;
+
+            if (authenticatedUser.uid !== userId) {
+                res.status(403).json({
+                    success: false,
+                    message: 'No tienes permiso'
+                });
+                return;
+            }
+
+            console.log('Marcando todas las notificaciones como leídas para usuario:', userId);
+
+            const updated = await this.notificationService.markAllAsRead(userId);
+
+            console.log('Notificaciones actualizadas:', updated);
+
+            res.json({
+                success: true,
+                message: 'Todas las notificaciones marcadas como leídas',
+                updated
+            });
+
+        } catch (error: any) {
+            console.error('Error al marcar notificaciones:', error);
+            res.status(500).json({
+                success: false,
+                message: error.message || 'Error al marcar notificaciones'
+            });
+        }
+    };
+
+    // DELETE /api/notifications-user/:notificationId
+    deleteNotification = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { notificationId } = req.params;
+            const authenticatedUser = (req as any).user;
+
+            console.log('Eliminando notificación:', notificationId);
+
+            await this.notificationService.deleteNotification(notificationId, authenticatedUser.uid);
+
+            console.log('Notificación eliminada');
+
+            res.json({
+                success: true,
+                message: 'Notificación eliminada'
+            });
+
+        } catch (error: any) {
+            console.error('Error al eliminar notificación:', error);
+            res.status(500).json({
+                success: false,
+                message: error.message || 'Error al eliminar notificación'
+            });
+        }
+    };
 }

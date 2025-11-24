@@ -161,11 +161,11 @@ export const ownerMiddleware = (resourceField: string = 'userId') => {
       }
 
       next();
-
     } catch (error) {
+      console.error('Error en ownerMiddleware:', error);
       res.status(500).json({
         success: false,
-        message: 'Error al verificar permisos'
+        message: 'Error al verificar propietario del recurso'
       });
     }
   };

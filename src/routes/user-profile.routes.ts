@@ -3,7 +3,7 @@ import { db, auth } from '../config/firebaseAdmin';
 import admin from 'firebase-admin';
 import { authMiddleware } from '../middleware/auth.middleware';
 import bcrypt from 'bcrypt';
-
+import { UserController } from '../controllers/userController';
 const router = Router();
 
 // Obtener datos del perfil del usuario

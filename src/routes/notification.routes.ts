@@ -3,17 +3,18 @@ import { NotificationController } from '../controllers/notificationController';
 import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
-
-// Todas las rutas requieren autenticación
-router.use(authMiddleware);
+const notificationController = new NotificationController();
 
 // Registrar token push del dispositivo
-router.post('/register', NotificationController.registerPushToken);
+router.post('/register', authMiddleware, notificationController.registerPushToken);
 
-// Enviar notificación a un usuario específico (solo admins)
-router.post('/send', NotificationController.sendPushNotification);
+// Eliminar token push
+router.delete('/token', authMiddleware, notificationController.deletePushToken);
 
-// Enviar notificación a todos los usuarios (solo admins)
-router.post('/broadcast', NotificationController.sendBroadcastNotification);
+// Enviar notificación a un usuario específico (admin)
+router.post('/send', authMiddleware, notificationController.sendPushNotification);
+
+// Enviar notificación a todos los usuarios (admin)
+router.post('/broadcast', authMiddleware, notificationController.sendBroadcastNotification);
 
 export default router;
