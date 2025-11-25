@@ -10,7 +10,7 @@ export class ParkingSpacesController {
       const { latitude, longitude, radius } = req.query;
       
       console.log('=== OBTENIENDO ESPACIOS DISPONIBLES ===');
-      console.log('Ubicación usuario:', { latitude, longitude, radius });
+      console.log('Ubicacion usuario:', { latitude, longitude, radius });
       
       const spacesSnapshot = await db.collection('parkingSpaces')
         .where('status', '==', 'available')
@@ -44,7 +44,7 @@ export class ParkingSpacesController {
         });
       });
 
-      console.log('Calles únicas encontradas:', streetIds.size);
+      console.log('Calles unicas encontradas:', streetIds.size);
 
       const streetsMap = new Map<string, any>();
       for (const streetId of streetIds) {
@@ -73,7 +73,7 @@ export class ParkingSpacesController {
         return {
           id: space.id,
           numero: space.spaceCode,
-          ubicacion: street?.streetAddress || 'Ubicación desconocida',
+          ubicacion: street?.streetAddress || 'Ubicacion desconocida',
           tarifaPorHora: fee,
           latitude: space.latitude,
           longitude: space.longitude,
@@ -86,12 +86,18 @@ export class ParkingSpacesController {
         const userLon = Number(longitude);
         const maxRadius = Number(radius) || 1000;
         
-        console.log('Filtrando por ubicación:', { userLat, userLon, maxRadius });
+        console.log('Filtrando por ubicacion:', { userLat, userLon, maxRadius });
         
+        // FIX: Usar ParkingSpacesController.calculateDistance en lugar de this.calculateDistance
         espacios = espacios
           .map(espacio => ({
             ...espacio,
-            distancia: this.calculateDistance(userLat, userLon, espacio.latitude, espacio.longitude)
+            distancia: ParkingSpacesController.calculateDistance(
+              userLat, 
+              userLon, 
+              espacio.latitude, 
+              espacio.longitude
+            )
           }))
           .filter(espacio => espacio.distancia <= maxRadius)
           .sort((a, b) => a.distancia - b.distancia);
@@ -122,7 +128,7 @@ export class ParkingSpacesController {
     }
   }
 
-  // ========== OBTENER ESTADÍSTICAS DE ESPACIOS (Admin) ==========
+  // ========== OBTENER ESTADISTICAS DE ESPACIOS (Admin) ==========
   static async getStats(req: Request, res: Response): Promise<void> {
     try {
       console.log('Obteniendo estadisticas de espacios...');
@@ -228,7 +234,7 @@ export class ParkingSpacesController {
       if (!validStatuses.includes(status)) {
         res.status(400).json({
           success: false,
-          message: `Estado inválido. Debe ser uno de: ${validStatuses.join(', ')}`
+          message: `Estado invalido. Debe ser uno de: ${validStatuses.join(', ')}`
         });
         return;
       }
@@ -263,14 +269,15 @@ export class ParkingSpacesController {
     }
   }
 
-  // ========== FUNCIÓN AUXILIAR PARA CALCULAR DISTANCIA ==========
+  // ========== FUNCION AUXILIAR PARA CALCULAR DISTANCIA ==========
+  // NOTA: Retorna distancia en KILOMETROS
   private static calculateDistance(
     lat1: number,
     lon1: number,
     lat2: number,
     lon2: number
   ): number {
-    const R = 6371;
+    const R = 6371; // Radio de la Tierra en kilometros
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a =
@@ -278,6 +285,6 @@ export class ParkingSpacesController {
       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
       Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
+    return R * c; // Retorna en kilometros
   }
 }

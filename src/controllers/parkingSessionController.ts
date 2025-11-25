@@ -4,14 +4,14 @@ import admin from 'firebase-admin';
 
 export class ParkingSessionController {
   
-  // ========== INICIAR SESIÓN DE ESTACIONAMIENTO ==========
+  // ========== INICIAR SESION DE ESTACIONAMIENTO ==========
   static async startSession(req: Request, res: Response): Promise<void> {
     try {
       const authenticatedUser = (req as any).user;
       const userId = authenticatedUser.uid;
       const { parkingSpaceId, licensePlate } = req.body;
 
-      console.log('=== INICIANDO SESIÓN DE ESTACIONAMIENTO ===');
+      console.log('=== INICIANDO SESION DE ESTACIONAMIENTO ===');
       console.log('User ID:', userId);
       console.log('Parking Space ID:', parkingSpaceId);
       console.log('License Plate:', licensePlate);
@@ -40,7 +40,7 @@ export class ParkingSessionController {
       if (spaceData?.status !== 'available') {
         res.status(400).json({
           success: false,
-          message: 'El espacio no está disponible'
+          message: 'El espacio no esta disponible'
         });
         return;
       }
@@ -51,7 +51,7 @@ export class ParkingSessionController {
       if (!streetDoc.exists) {
         res.status(404).json({
           success: false,
-          message: 'Información de la calle no encontrada'
+          message: 'Informacion de la calle no encontrada'
         });
         return;
       }
@@ -108,7 +108,7 @@ export class ParkingSessionController {
       if (!activeSessionSnapshot.empty) {
         res.status(400).json({
           success: false,
-          message: 'Ya tienes una sesión de estacionamiento activa'
+          message: 'Ya tienes una sesion de estacionamiento activa'
         });
         return;
       }
@@ -172,27 +172,27 @@ export class ParkingSessionController {
       console.error('Error al iniciar estacionamiento:', error);
       res.status(500).json({
         success: false,
-        message: 'Error al iniciar sesión de estacionamiento',
+        message: 'Error al iniciar sesion de estacionamiento',
         error: error instanceof Error ? error.message : 'Error desconocido'
       });
     }
   }
 
-  // ========== FINALIZAR SESIÓN DE ESTACIONAMIENTO ==========
+  // ========== FINALIZAR SESION DE ESTACIONAMIENTO ==========
   static async endSession(req: Request, res: Response): Promise<void> {
     try {
       const authenticatedUser = (req as any).user;
       const userId = authenticatedUser.uid;
       const { sessionId } = req.body;
 
-      console.log('=== FINALIZANDO SESIÓN DE ESTACIONAMIENTO ===');
+      console.log('=== FINALIZANDO SESION DE ESTACIONAMIENTO ===');
       console.log('User ID:', userId);
       console.log('Session ID:', sessionId);
 
       if (!sessionId) {
         res.status(400).json({
           success: false,
-          message: 'Falta el ID de la sesión'
+          message: 'Falta el ID de la sesion'
         });
         return;
       }
@@ -203,7 +203,7 @@ export class ParkingSessionController {
       if (!sessionDoc.exists) {
         res.status(404).json({
           success: false,
-          message: 'Sesión no encontrada'
+          message: 'Sesion no encontrada'
         });
         return;
       }
@@ -213,7 +213,7 @@ export class ParkingSessionController {
       if (sessionData?.userId !== userId) {
         res.status(403).json({
           success: false,
-          message: 'No tienes permiso para finalizar esta sesión'
+          message: 'No tienes permiso para finalizar esta sesion'
         });
         return;
       }
@@ -221,7 +221,7 @@ export class ParkingSessionController {
       if (sessionData?.status !== 'active') {
         res.status(400).json({
           success: false,
-          message: 'La sesión ya está finalizada'
+          message: 'La sesion ya esta finalizada'
         });
         return;
       }
@@ -229,12 +229,16 @@ export class ParkingSessionController {
       const startTime = sessionData.startTime.toDate();
       const endTime = new Date();
       const durationMs = endTime.getTime() - startTime.getTime();
-      const durationHours = Math.ceil(durationMs / (1000 * 60 * 60));
-
+      
+      // Calculo exacto de duracion (no redondear a horas completas)
+      // Cambio de tu compañera: cobra por tiempo exacto
+      const durationSeconds = durationMs / 1000;
+      const durationHours = Number((durationSeconds / 3600).toFixed(2));
+      
       const feePerHour = sessionData.feePerHour || 50;
-      const totalCost = durationHours * feePerHour;
+      const totalCost = Number((durationHours * feePerHour).toFixed(2));
 
-      console.log('Duración:', durationHours);
+      console.log('Duracion:', durationHours, 'horas');
       console.log('Costo total:', totalCost);
 
       const userRef = db.collection('users').doc(userId);
@@ -308,7 +312,7 @@ export class ParkingSessionController {
 
         res.json({
           success: true,
-          message: 'Estacionamiento finalizado. Se generó una multa por saldo insuficiente.',
+          message: 'Estacionamiento finalizado. Se genero una multa por saldo insuficiente.',
           duration: durationHours,
           totalCost,
           currentBalance,
@@ -320,19 +324,19 @@ export class ParkingSessionController {
       console.error('Error al finalizar estacionamiento:', error);
       res.status(500).json({
         success: false,
-        message: 'Error al finalizar sesión de estacionamiento',
+        message: 'Error al finalizar sesion de estacionamiento',
         error: error instanceof Error ? error.message : 'Error desconocido'
       });
     }
   }
 
-  // ========== OBTENER SESIÓN ACTIVA DEL USUARIO ==========
+  // ========== OBTENER SESION ACTIVA DEL USUARIO ==========
   static async getActiveSession(req: Request, res: Response): Promise<void> {
     try {
       const authenticatedUser = (req as any).user;
       const userId = authenticatedUser.uid;
 
-      console.log('Obteniendo sesión activa para usuario:', userId);
+      console.log('Obteniendo sesion activa para usuario:', userId);
 
       const activeSessionSnapshot = await db.collection('parkingSessions')
         .where('userId', '==', userId)
@@ -372,10 +376,10 @@ export class ParkingSessionController {
       });
 
     } catch (error) {
-      console.error('Error al obtener sesión activa:', error);
+      console.error('Error al obtener sesion activa:', error);
       res.status(500).json({
         success: false,
-        message: 'Error al obtener sesión activa'
+        message: 'Error al obtener sesion activa'
       });
     }
   }
@@ -425,13 +429,13 @@ export class ParkingSessionController {
     }
   }
 
-  // ========== ESTADÍSTICAS DE OCUPACIÓN REAL ==========
+  // ========== ESTADISTICAS DE OCUPACION REAL ==========
   static async getStats(req: Request, res: Response): Promise<void> {
     try {
       const authenticatedUser = (req as any).user;
       const userId = authenticatedUser.uid;
 
-      console.log('Obteniendo estadísticas de ocupación...');
+      console.log('Obteniendo estadisticas de ocupacion...');
 
       const activeSessionsSnapshot = await db.collection('parkingSessions')
         .where('status', '==', 'active')
@@ -471,10 +475,10 @@ export class ParkingSessionController {
       });
 
     } catch (error) {
-      console.error('Error al obtener estadísticas:', error);
+      console.error('Error al obtener estadisticas:', error);
       res.status(500).json({
         success: false,
-        message: 'Error al obtener estadísticas'
+        message: 'Error al obtener estadisticas'
       });
     }
   }

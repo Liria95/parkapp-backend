@@ -17,10 +17,10 @@ if (!process.env.FIREBASE_API_KEY || !process.env.FIREBASE_PROJECT_ID) {
 import express from 'express';
 import cors from 'cors';
 
-// Importar configuración de Firebase Admin
+// Firebase Admin
 import './config/firebaseAdmin';
 
-// Importar rutas
+// Rutas
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import pushNotificationsRoutes from './routes/pushNotifications.routes';
@@ -31,22 +31,23 @@ import userProfileRoutes from './routes/user-profile.routes';
 import manualRegistrationRoutes from './routes/manualRegistration.routes';
 import parkingSpacesRoutes from './routes/parkingSpaces.routes';
 import parkingSessionsRoutes from './routes/parkingSessions.routes';
+import vehiclesRoutes from "./routes/vehicles.routes";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// MIDDLEWARES
+// Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Logging middleware
+// Logging
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.path}`);
   next();
 });
 
-// RUTAS
+// Rutas principales
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', pushNotificationsRoutes);
@@ -57,8 +58,9 @@ app.use('/api/user-profile', userProfileRoutes);
 app.use('/api/manual-registration', manualRegistrationRoutes);
 app.use('/api/parking-spaces', parkingSpacesRoutes);
 app.use('/api/parking-sessions', parkingSessionsRoutes);
+app.use("/api/vehicles", vehiclesRoutes);
 
-// RUTA RAIZ
+// Root
 app.get('/', (req, res) => {
   res.json({
     success: true,
@@ -75,12 +77,13 @@ app.get('/', (req, res) => {
       manualRegistration: '/api/manual-registration',
       parkingSpaces: '/api/parking-spaces',
       parkingSessions: '/api/parking-sessions',
+      vehicles: '/api/vehicles',
       health: '/api/health'
     }
   });
 });
 
-// HEALTH CHECK
+// Health Check
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
@@ -101,7 +104,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// RUTAS NO ENCONTRADAS
+// 404 - Rutas no encontradas
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -127,12 +130,12 @@ app.use((req, res) => {
       'PUT /api/user-profile/:userId',
       'DELETE /api/user-profile/:userId',
 
-      // Push Notifications (Expo)
+      // Push Notifications
       'POST /api/notifications/register',
       'POST /api/notifications/send',
       'POST /api/notifications/broadcast',
 
-      // User Notifications (Database)
+      // Notifications User
       'GET /api/notifications-user/user/:userId',
       'PUT /api/notifications-user/:notificationId/read',
       'PUT /api/notifications-user/user/:userId/read-all',
@@ -166,12 +169,18 @@ app.use((req, res) => {
       'POST /api/parking-sessions/end',
       'GET /api/parking-sessions/active',
       'GET /api/parking-sessions/history',
-      'GET /api/parking-sessions/stats'
+      'GET /api/parking-sessions/stats',
+
+      // Vehicles
+      'GET /api/vehicles',
+      'POST /api/vehicles',
+      'GET /api/vehicles/user/:userId',
+      'DELETE /api/vehicles/:vehicleId'
     ]
   });
 });
 
-// MANEJO DE ERRORES
+// Error Handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Error:', err);
 
@@ -182,7 +191,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-// INICIAR SERVIDOR
+// Start server
 app.listen(PORT, () => {
   console.log('\n[SERVER] Servidor corriendo en puerto ' + PORT);
   console.log('[API] Base: http://localhost:' + PORT);
@@ -197,6 +206,7 @@ app.listen(PORT, () => {
   console.log('[MANUAL REGISTRATION] http://localhost:' + PORT + '/api/manual-registration');
   console.log('[PARKING SPACES] http://localhost:' + PORT + '/api/parking-spaces');
   console.log('[PARKING SESSIONS] http://localhost:' + PORT + '/api/parking-sessions');
+  console.log('[VEHICLES] http://localhost:' + PORT + '/api/vehicles');
   console.log('\n[FIREBASE] Project: ' + (process.env.FIREBASE_PROJECT_ID || 'NOT_CONFIGURED'));
   console.log('[ENV] Environment: ' + (process.env.NODE_ENV || 'development') + '\n');
 });

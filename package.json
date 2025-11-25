@@ -30,6 +30,7 @@
     "express": "^5.1.0",
     "firebase": "^12.4.0",
     "firebase-admin": "^13.5.0",
+    "geolib": "^3.3.4",
     "jsonwebtoken": "^9.0.2",
     "mercadopago": "^2.9.0",
     "multer": "^2.0.2",

@@ -34,12 +34,12 @@ const upload = multer({
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
-      cb(new Error('Solo se permiten imágenes'));
+      cb(new Error('Solo se permiten imagenes'));
     }
   }
 });
 
-// ========== RUTAS DE USUARIO (Requieren autenticación) ==========
+// ========== RUTAS DE USUARIO (Requieren autenticacion) ==========
 
 // Obtener saldo del usuario actual
 router.get('/balance', authMiddleware, async (req: Request, res: Response) => {
@@ -136,13 +136,13 @@ router.get('/search', authMiddleware, adminMiddleware, async (req: Request, res:
   if (!q || typeof q !== 'string') {
     res.status(400).json({
       success: false,
-      message: 'Debe proporcionar un término de búsqueda'
+      message: 'Debe proporcionar un termino de busqueda'
     });
     return;
   }
   
   try {
-    console.log('Buscando usuarios con término:', q);
+    console.log('Buscando usuarios con termino:', q);
     
     const searchTerm = q.toLowerCase();
     const usersSnapshot = await db.collection('users').get();
@@ -186,10 +186,10 @@ router.get('/search', authMiddleware, adminMiddleware, async (req: Request, res:
   }
 });
 
-// Obtener estadísticas de usuarios
+// Obtener estadisticas de usuarios
 router.get('/stats/overview', authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
   try {
-    console.log('Obteniendo estadísticas de usuarios...');
+    console.log('Obteniendo estadisticas de usuarios...');
     
     const usersSnapshot = await db.collection('users').get();
     
@@ -231,15 +231,124 @@ router.get('/stats/overview', authMiddleware, adminMiddleware, async (req: Reque
     });
     
   } catch (error: any) {
-    console.error('Error al obtener estadísticas:', error);
+    console.error('Error al obtener estadisticas:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al obtener estadísticas'
+      message: 'Error al obtener estadisticas'
     });
   }
 });
 
-// Obtener usuario específico
+router.get('/stats/history', authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
+  try {
+    console.log('Obteniendo estadisticas historicas (sin indices)...');
+
+    const now = new Date();
+    
+    // Calcular fecha de ayer
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+    const yesterdayEnd = new Date(yesterday);
+    yesterdayEnd.setHours(23, 59, 59, 999);
+
+    // Calcular fecha de hace una semana
+    const lastWeekStart = new Date(now);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+    lastWeekStart.setHours(0, 0, 0, 0);
+    const lastWeekEnd = new Date(lastWeekStart);
+    lastWeekEnd.setDate(lastWeekEnd.getDate() + 6);
+    lastWeekEnd.setHours(23, 59, 59, 999);
+
+    // OBTENER TODAS LAS TRANSACCIONES (sin filtros de fecha ni tipo)
+    const allTransactions = await db.collection('transactions').get();
+
+    // Filtrar en memoria - AYER
+    let yesterdayRevenue = 0;
+    allTransactions.docs.forEach(doc => {
+      const data = doc.data();
+      if (!data.createdAt || !data.type || !data.amount) return;
+      
+      const createdAt = data.createdAt.toDate();
+      if (data.type === 'recharge' && 
+          data.amount > 0 && 
+          createdAt >= yesterday && 
+          createdAt <= yesterdayEnd) {
+        yesterdayRevenue += data.amount;
+      }
+    });
+
+    // Filtrar en memoria - SEMANA PASADA
+    let lastWeekRevenue = 0;
+    allTransactions.docs.forEach(doc => {
+      const data = doc.data();
+      if (!data.createdAt || !data.type || !data.amount) return;
+      
+      const createdAt = data.createdAt.toDate();
+      if (data.type === 'recharge' && 
+          data.amount > 0 && 
+          createdAt >= lastWeekStart && 
+          createdAt <= lastWeekEnd) {
+        lastWeekRevenue += data.amount;
+      }
+    });
+
+    // OBTENER TODOS LOS USUARIOS (sin filtros de fecha)
+    const allUsers = await db.collection('users').get();
+
+    // Filtrar en memoria - USUARIOS AYER
+    let yesterdayUsers = 0;
+    allUsers.docs.forEach(doc => {
+      const data = doc.data();
+      if (!data.updatedAt) return;
+      
+      const updatedAt = data.updatedAt.toDate();
+      if (updatedAt >= yesterday && updatedAt <= yesterdayEnd) {
+        yesterdayUsers++;
+      }
+    });
+
+    // Filtrar en memoria - USUARIOS SEMANA PASADA
+    let lastWeekUsers = 0;
+    allUsers.docs.forEach(doc => {
+      const data = doc.data();
+      if (!data.updatedAt) return;
+      
+      const updatedAt = data.updatedAt.toDate();
+      if (updatedAt >= lastWeekStart && updatedAt <= lastWeekEnd) {
+        lastWeekUsers++;
+      }
+    });
+
+    console.log('Estadisticas historicas calculadas:', {
+      yesterday: { users: yesterdayUsers, revenue: yesterdayRevenue },
+      lastWeek: { users: lastWeekUsers, revenue: lastWeekRevenue }
+    });
+
+    res.json({
+      success: true,
+      history: {
+        yesterday: {
+          activeUsers: yesterdayUsers,
+          revenue: yesterdayRevenue.toFixed(2)
+        },
+        lastWeek: {
+          activeUsers: lastWeekUsers,
+          revenue: lastWeekRevenue.toFixed(2)
+        }
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Error al obtener estadisticas historicas:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener estadisticas historicas'
+    });
+  }
+});
+
+// Obtener usuario especifico
 router.get('/:userId', authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
   const { userId } = req.params;
   
@@ -286,7 +395,7 @@ router.put('/:userId/balance', authMiddleware, adminMiddleware, async (req: Requ
   if (balance === undefined || balance < 0) {
     res.status(400).json({
       success: false,
-      message: 'El saldo debe ser un número positivo'
+      message: 'El saldo debe ser un numero positivo'
     });
     return;
   }
