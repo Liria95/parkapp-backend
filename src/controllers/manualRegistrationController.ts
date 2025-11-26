@@ -127,7 +127,7 @@ export class ManualRegistrationController {
               return { ...espacio, distancia: Infinity };
             }
             
-            const distancia = this.calcularDistancia(
+            const distancia = ManualRegistrationController.calcularDistancia(
               adminLat,
               adminLng,
               espacio.latitude,
